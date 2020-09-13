@@ -21,6 +21,7 @@ func main() {
 	protocol := getEnvVariable("SPEEDFLUX_PROTOCOL")
 	host := getEnvVariable("SPEEDFLUX_HOST")
 	port := getEnvVariable("SPEEDFLUX_PORT")
+	db := getEnvVariable("SPEEDFLUX_DB")
 	interval, err := strconv.Atoi(getEnvVariable("SPEEDFLUX_INTERVAL"))
 	if err != nil {
 		log.Fatalf("Interval: %d could not successfully be parsed: %v", interval, err)
@@ -29,23 +30,23 @@ func main() {
 	log.Printf("starting measurements for location %s every %d minute(s)", location, interval)
 
 	for true {
-		go measure(location, protocol, host, port, userName, password)
+		go measure(location, protocol, host, port, userName, password, db)
 		log.Printf("starting measurement and next iteration in %d seconds", interval)
 		time.Sleep(time.Duration(interval) * time.Minute)
 	}
 }
 
-func measure(location string, protocol string, host string, port string, userName string, password string) {
+func measure(location string, protocol string, host string, port string, userName string, password string, db string) {
 	down, up := testSpeed()
-	sendToInflux(down, up, location, fmt.Sprintf("%s://%s:%s", protocol, host, port), fmt.Sprintf("%s:%s", userName, password))
+	sendToInflux(down, up, location, fmt.Sprintf("%s://%s:%s", protocol, host, port), db, fmt.Sprintf("%s:%s", userName, password))
 }
 
-func sendToInflux(down, up int, location, serverUrl, authToken string) {
+func sendToInflux(down, up int, location, serverUrl, db, authToken string) {
 	log.Printf("sending data to influxdb server %s", serverUrl)
 
 	client := influxdb2.NewClient(serverUrl, authToken)
 
-	writeAPI := client.WriteAPIBlocking("", "speedtest")
+	writeAPI := client.WriteAPIBlocking("", db)
 
 	measurement := influxdb2.NewPoint("speed",
 		map[string]string{

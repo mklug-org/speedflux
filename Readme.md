@@ -11,3 +11,5 @@ Variables to set:
 `SPEEDFLUX_HOST` database address (e.g. influxdb.example.com)
 
 `SPEEDFLUX_PORT` port where influxdb is reachable
+
+`SPEEDFLUX_DB` database or bucket where the data will be saved (has to exist already)
