@@ -3,32 +3,53 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/influxdata/influxdb-client-go/v2"
+	"github.com/influxdata/influxdb-client-go"
 	"github.com/johnsto/speedtest"
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 )
 
 func main() {
 
-	down, up := testSpeed()
-	sendToInflux(down, up)
+	location := getEnvVariable("SPEEDFLUX_LOCATION")
+	userName := getEnvVariable("SPEEDFLUX_USER")
+	password := getEnvVariable("SPEEDFLUX_PASS")
+	protocol := getEnvVariable("SPEEDFLUX_PROTOCOL")
+	host := getEnvVariable("SPEEDFLUX_HOST")
+	port := getEnvVariable("SPEEDFLUX_PORT")
+	interval, err := strconv.Atoi(getEnvVariable("SPEEDFLUX_INTERVAL"))
+	if err != nil {
+		log.Fatalf("Interval: %d could not successfully be parsed: %v", interval, err)
+	}
 
+	log.Printf("starting measurements for location %s every %d seconds", location, interval)
+
+	for true {
+		go measure(location, protocol, host, port, userName, password)
+		log.Printf("starting measurement and next iteration in %d seconds", interval)
+		time.Sleep(time.Duration(interval) * time.Second)
+	}
 }
 
-func sendToInflux(down, up int) {
-	userName := "kii"
-	password := "influx4cloudupload"
+func measure(location string, protocol string, host string, port string, userName string, password string) {
+	down, up := testSpeed()
+	sendToInflux(down, up, location, fmt.Sprintf("%s://%s:%s", protocol, host, port), fmt.Sprintf("%s:%s", userName, password))
+}
 
-	client := influxdb2.NewClient("https://influxdb.cloud.mklug.at:443", fmt.Sprintf("%s:%s", userName, password))
+func sendToInflux(down, up int, location, serverUrl, authToken string) {
+	log.Printf("sending data to influxdb server %s", serverUrl)
+
+	client := influxdb2.NewClient(serverUrl, authToken)
 
 	writeAPI := client.WriteAPIBlocking("", "speedtest")
 
-	measurement := influxdb2.NewPoint("home",
+	measurement := influxdb2.NewPoint("speed",
 		map[string]string{
-			"location": "home",
+			"location": location,
 		},
 		map[string]interface{}{
 			"down": down,
@@ -40,6 +61,7 @@ func sendToInflux(down, up int) {
 	if err != nil {
 		log.Printf("Write error: %s\n", err.Error())
 	}
+	log.Print("Data sent to influxdb successfully")
 }
 
 func testSpeed() (int, int) {
@@ -94,4 +116,12 @@ func testSpeed() (int, int) {
 	log.Println(speedtest.NiceRate(rateUp))
 
 	return rateDown, rateUp
+}
+
+func getEnvVariable(v string) string {
+	value, found := os.LookupEnv(v)
+	if !found {
+		log.Fatalf("ENV variable %s is not set. Quitting", v)
+	}
+	return value
 }
