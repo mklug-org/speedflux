@@ -26,12 +26,12 @@ func main() {
 		log.Fatalf("Interval: %d could not successfully be parsed: %v", interval, err)
 	}
 
-	log.Printf("starting measurements for location %s every %d seconds", location, interval)
+	log.Printf("starting measurements for location %s every %d minute(s)", location, interval)
 
 	for true {
 		go measure(location, protocol, host, port, userName, password)
 		log.Printf("starting measurement and next iteration in %d seconds", interval)
-		time.Sleep(time.Duration(interval) * time.Second)
+		time.Sleep(time.Duration(interval) * time.Minute)
 	}
 }
 
@@ -66,7 +66,7 @@ func sendToInflux(down, up int, location, serverUrl, authToken string) {
 
 func testSpeed() (int, int) {
 
-	const timeout = 1 * time.Second
+	const timeout = 10 * time.Second
 
 	log.Print("starting speedtest exporter")
 
