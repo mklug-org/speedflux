@@ -31,7 +31,7 @@ func main() {
 
 	for true {
 		go measure(location, protocol, host, port, userName, password, db)
-		log.Printf("starting measurement and next iteration in %d seconds", interval)
+		log.Printf("starting measurement and next iteration in %d minutes", interval)
 		time.Sleep(time.Duration(interval) * time.Minute)
 	}
 }
